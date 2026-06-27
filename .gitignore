@@ -11,6 +11,7 @@ dist/
 .venv/
 .uv/
 
+.python-version
 
 data/raw/
 outputs/
