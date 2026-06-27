@@ -13,8 +13,13 @@ dist/
 
 .python-version
 
-data/raw/
-outputs/
+data/downloads/*
+data/raw/*
+outputs/*
+
+!data/downloads/.gitkeep
+!data/raw/.gitkeep
+!outputs/.gitkeep
 *.pt
 *.pth
 *.ckpt
