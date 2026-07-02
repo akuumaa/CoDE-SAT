@@ -48,7 +48,7 @@ def load_classes(splits_dir: Path):
     return classes_df["class_name"].tolist()
 
 
-def get_dataloaders(batch_size: int, splits_dir: Path = Path("data/splits")):
+def get_dataloaders(batch_size: int, num_workers: int, splits_dir: Path = Path("data/splits")):
     transform = transforms.Compose([
         # pretrained timm models usually expect 224x224 inputs
         transforms.Resize((224, 224)),
@@ -79,22 +79,31 @@ def get_dataloaders(batch_size: int, splits_dir: Path = Path("data/splits")):
 
     classes = load_classes(splits_dir)
 
+    # pin_memory only helps when batches are copied to a GPU
+    pin_memory = torch.cuda.is_available()
+
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
 
     val_loader = DataLoader(
         val_set,
         batch_size=batch_size,
         shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
 
     test_loader = DataLoader(
         test_set,
         batch_size=batch_size,
         shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
 
     return train_loader, val_loader, test_loader, classes
@@ -203,6 +212,13 @@ def main():
         help="learning rate",
     )
 
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=4,
+        help="number of dataloader worker processes",
+    )
+
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -212,6 +228,7 @@ def main():
 
     train_loader, val_loader, test_loader, classes = get_dataloaders(
         batch_size=args.batch_size,
+        num_workers=args.num_workers,
     )
 
     model = create_model(
@@ -222,7 +239,7 @@ def main():
     model = model.to(device)
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=args.lr)
+    optimizer = AdamW(model.parameters(), lr=args.lr) # todo must be variable
 
     checkpoint_dir = Path("outputs/checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)

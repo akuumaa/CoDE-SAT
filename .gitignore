@@ -15,6 +15,7 @@ dist/
 
 data/downloads/*
 data/raw/*
+data/splits/*
 outputs/*
 
 !data/downloads/.gitkeep
@@ -29,6 +30,9 @@ outputs/*
 
 # Logs
 *.log
+
+# IDE
+.idea/
 
 # OS
 .DS_Store
