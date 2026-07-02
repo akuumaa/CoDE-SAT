@@ -1,7 +1,5 @@
 # TODO:
-# - save split properly so all models use same data
 # - add distilled deit later
-# - save best model checkpoint
 # - add data efficiency later
 # - add robustness tests later
 
@@ -10,17 +8,47 @@ import json
 import time
 from pathlib import Path
 
+import pandas as pd
 import timm
 import torch
 import torch.nn as nn
+from PIL import Image
 from sklearn.metrics import accuracy_score, f1_score
 from torch.optim import AdamW
-from torch.utils.data import DataLoader, random_split
-from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
 from tqdm import tqdm
 
 
-def get_dataloaders(batch_size: int):
+class EuroSATSplit(Dataset):
+    def __init__(self, csv_path: Path, transform):
+        self.frame = pd.read_csv(csv_path)
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.frame)
+
+    def __getitem__(self, index):
+        row = self.frame.iloc[index]
+
+        image = Image.open(row["path"]).convert("RGB")
+        image = self.transform(image)
+
+        label = int(row["label"])
+
+        return image, label
+
+
+def load_classes(splits_dir: Path):
+    classes_path = splits_dir / "classes.txt"
+
+    classes_df = pd.read_csv(classes_path)
+    classes_df = classes_df.sort_values("label")
+
+    return classes_df["class_name"].tolist()
+
+
+def get_dataloaders(batch_size: int, splits_dir: Path = Path("data/splits")):
     transform = transforms.Compose([
         # pretrained timm models usually expect 224x224 inputs
         transforms.Resize((224, 224)),
@@ -34,26 +62,22 @@ def get_dataloaders(batch_size: int):
         ),
     ])
 
-    try:
-        dataset = datasets.EuroSAT(
-            root="data",
-            download=False,
-            transform=transform,
-        )
-    except RuntimeError as error:
-        raise RuntimeError(
-            "EuroSAT was not found. Run prepare_eurosat.py"
-        ) from error
+    train_csv = splits_dir / "train.csv"
+    val_csv = splits_dir / "val.csv"
+    test_csv = splits_dir / "test.csv"
 
-    train_size = int(0.7 * len(dataset))
-    val_size = int(0.15 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
+    for csv_path in (train_csv, val_csv, test_csv):
+        if not csv_path.exists():
+            raise FileNotFoundError(
+                f"{csv_path} not found. Run scripts/prepare_eurosat.py "
+                "and then scripts/make_splits.py."
+            )
 
-    train_set, val_set, test_set = random_split(
-        dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(42),
-    )
+    train_set = EuroSATSplit(train_csv, transform)
+    val_set = EuroSATSplit(val_csv, transform)
+    test_set = EuroSATSplit(test_csv, transform)
+
+    classes = load_classes(splits_dir)
 
     train_loader = DataLoader(
         train_set,
@@ -73,7 +97,7 @@ def get_dataloaders(batch_size: int):
         shuffle=False,
     )
 
-    return train_loader, val_loader, test_loader, dataset.classes
+    return train_loader, val_loader, test_loader, classes
 
 
 def create_model(model_name: str, num_classes: int):
@@ -200,6 +224,12 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
     optimizer = AdamW(model.parameters(), lr=args.lr)
 
+    checkpoint_dir = Path("outputs/checkpoints")
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    checkpoint_path = checkpoint_dir / f"{args.model}_best.pt"
+    best_val_acc = -1.0
+
     history = []
     start_time = time.time()
 
@@ -228,6 +258,11 @@ def main():
         print(f"val acc:    {val_acc:.4f}")
         print(f"val f1:     {val_f1:.4f}")
 
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f"saved new best checkpoint (val acc {val_acc:.4f})")
+
         history.append({
             "epoch": epoch + 1,
             "train_loss": train_loss,
@@ -239,6 +274,9 @@ def main():
         })
 
     train_time = time.time() - start_time
+
+    # evaluate the best checkpoint, not just whatever the last epoch left behind
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
     test_loss, test_acc, test_f1 = evaluate(
         model=model,
@@ -254,24 +292,28 @@ def main():
         "batch_size": args.batch_size,
         "learning_rate": args.lr,
         "train_time_seconds": train_time,
+        "best_val_acc": best_val_acc,
+        "checkpoint_path": str(checkpoint_path),
         "test_loss": test_loss,
         "test_acc": test_acc,
         "test_f1": test_f1,
         "history": history,
     }
 
-    Path("results/metrics").mkdir(parents=True, exist_ok=True)
+    metrics_dir = Path("outputs/metrics")
+    metrics_dir.mkdir(parents=True, exist_ok=True)
 
-    result_path = f"results/metrics/{args.model}_results.json"
+    result_path = metrics_dir / f"{args.model}_results.json"
 
     with open(result_path, "w") as file:
         json.dump(results, file, indent=4)
 
-    print("\nfinal test result")
+    print("\nfinal test result (best checkpoint)")
     print(f"test loss: {test_loss:.4f}")
     print(f"test acc:  {test_acc:.4f}")
     print(f"test f1:   {test_f1:.4f}")
-    print(f"saved to:  {result_path}")
+    print(f"checkpoint: {checkpoint_path}")
+    print(f"saved to:   {result_path}")
 
 
 if __name__ == "__main__":
