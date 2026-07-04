@@ -20,6 +20,8 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
+torch.multiprocessing.set_sharing_strategy("file_system") # otherwise the container instantly crashes with no space left
+
 class EuroSATSplit(Dataset):
     def __init__(self, csv_path: Path, transform):
         self.frame = pd.read_csv(csv_path)
