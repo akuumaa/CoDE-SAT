@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from sklearn.metrics import accuracy_score, f1_score
-from torch.optim import AdamW
+from torch.optim import SGD, AdamW, RMSprop
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
@@ -107,6 +107,19 @@ def get_dataloaders(batch_size: int, num_workers: int, splits_dir: Path = Path("
     )
 
     return train_loader, val_loader, test_loader, classes
+
+
+def create_optimizer(name: str, parameters, lr: float, momentum: float):
+    if name == "adamw":
+        return AdamW(parameters, lr=lr)
+
+    if name == "sgd":
+        return SGD(parameters, lr=lr, momentum=momentum)
+
+    if name == "rmsprop":
+        return RMSprop(parameters, lr=lr)
+
+    raise ValueError(f"unknown optimizer: {name}")
 
 
 def create_model(model_name: str, num_classes: int):
@@ -219,12 +232,38 @@ def main():
         help="number of dataloader worker processes",
     )
 
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="adamw",
+        choices=["adamw", "sgd", "rmsprop"],
+        help="optimizer for training",
+    )
+
+    parser.add_argument(
+        "--momentum",
+        type=float,
+        default=0.9,
+        help="momentum (only used by sgd)",
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="random seed",
+    )
+
     args = parser.parse_args()
+
+    torch.manual_seed(args.seed)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"device: {device}")
     print(f"model: {args.model}")
+    print(f"optimizer: {args.optimizer}")
+    print(f"seed: {args.seed}")
 
     train_loader, val_loader, test_loader, classes = get_dataloaders(
         batch_size=args.batch_size,
@@ -239,12 +278,19 @@ def main():
     model = model.to(device)
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=args.lr) # todo must be variable
+    optimizer = create_optimizer(
+        name=args.optimizer,
+        parameters=model.parameters(),
+        lr=args.lr,
+        momentum=args.momentum,
+    )
 
     checkpoint_dir = Path("outputs/checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    checkpoint_path = checkpoint_dir / f"{args.model}_best.pt"
+    # optimizer in the filename so runs with different optimizers don't overwrite each other
+    run_name = f"{args.model}_{args.optimizer}"
+    checkpoint_path = checkpoint_dir / f"{run_name}_best.pt"
     best_val_acc = -1.0
 
     history = []
@@ -308,6 +354,9 @@ def main():
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "learning_rate": args.lr,
+        "optimizer": args.optimizer,
+        "momentum": args.momentum if args.optimizer == "sgd" else None,
+        "seed": args.seed,
         "train_time_seconds": train_time,
         "best_val_acc": best_val_acc,
         "checkpoint_path": str(checkpoint_path),
@@ -320,7 +369,7 @@ def main():
     metrics_dir = Path("outputs/metrics")
     metrics_dir.mkdir(parents=True, exist_ok=True)
 
-    result_path = metrics_dir / f"{args.model}_results.json"
+    result_path = metrics_dir / f"{run_name}_results.json"
 
     with open(result_path, "w") as file:
         json.dump(results, file, indent=4)
