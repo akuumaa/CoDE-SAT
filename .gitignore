@@ -15,6 +15,7 @@ dist/
 
 data/downloads/*
 data/raw/*
+data/splits/*
 outputs/*
 
 !data/downloads/.gitkeep
@@ -30,6 +31,9 @@ outputs/*
 # Logs
 *.log
 
+# IDE
+.idea/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -37,3 +41,6 @@ Thumbs.db
 # Secrets / ENV
 .env
 *.env
+
+# local-only helper scripts
+scripts/check_gpu.py
