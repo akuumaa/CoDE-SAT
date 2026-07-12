@@ -1,0 +1,108 @@
+{
+    "model": "deit_small_distilled_patch16_224.fb_in1k",
+    "checkpoint": "outputs/checkpoints/deit_small_distilled_patch16_224.fb_in1k_sgd_stage1_best.pt",
+    "classes": [
+        "AnnualCrop",
+        "Forest",
+        "HerbaceousVegetation",
+        "Highway",
+        "Industrial",
+        "Pasture",
+        "PermanentCrop",
+        "Residential",
+        "River",
+        "SeaLake"
+    ],
+    "seed": 42,
+    "batch_size": 64,
+    "limit_batches": null,
+    "results": {
+        "clean": {
+            "kind": "none",
+            "loss": 0.04432387079655484,
+            "acc": 0.9871636632930141,
+            "f1": 0.9866254280726883,
+            "num_images": 4051
+        },
+        "noise": {
+            "kind": "noise",
+            "std": 0.1,
+            "loss": 2.504741834964437,
+            "acc": 0.6156504566773636,
+            "f1": 0.5823448941832213,
+            "num_images": 4051
+        },
+        "rotation15": {
+            "kind": "rotation",
+            "angle": 15,
+            "loss": 0.480633137403256,
+            "acc": 0.8820044433473216,
+            "f1": 0.8956276486980788,
+            "num_images": 4051
+        },
+        "rotation30": {
+            "kind": "rotation",
+            "angle": 30,
+            "loss": 0.8542289682389247,
+            "acc": 0.8158479387805481,
+            "f1": 0.834106233564335,
+            "num_images": 4051
+        },
+        "rotation45": {
+            "kind": "rotation",
+            "angle": 45,
+            "loss": 0.701083003356409,
+            "acc": 0.828684275487534,
+            "f1": 0.8475168787374647,
+            "num_images": 4051
+        },
+        "blur3": {
+            "kind": "blur",
+            "kernel": 3,
+            "loss": 0.04599743433841772,
+            "acc": 0.9866699580350531,
+            "f1": 0.9861285679728354,
+            "num_images": 4051
+        },
+        "blur5": {
+            "kind": "blur",
+            "kernel": 5,
+            "loss": 0.052287049642004216,
+            "acc": 0.9859294001481116,
+            "f1": 0.9854487752107367,
+            "num_images": 4051
+        },
+        "blur7": {
+            "kind": "blur",
+            "kernel": 7,
+            "loss": 0.06561319065601888,
+            "acc": 0.9829671686003456,
+            "f1": 0.9825880303031805,
+            "num_images": 4051
+        },
+        "occlusion10": {
+            "kind": "occlusion",
+            "fraction": 0.1,
+            "loss": 0.27172583148115154,
+            "acc": 0.9121204640829425,
+            "f1": 0.9213075837651094,
+            "num_images": 4051
+        },
+        "occlusion25": {
+            "kind": "occlusion",
+            "fraction": 0.25,
+            "loss": 0.8561708949224885,
+            "acc": 0.8017773389286595,
+            "f1": 0.8159359577508771,
+            "num_images": 4051
+        },
+        "occlusion40": {
+            "kind": "occlusion",
+            "fraction": 0.4,
+            "loss": 1.130997238468753,
+            "acc": 0.7533942236484819,
+            "f1": 0.7686004677522312,
+            "num_images": 4051
+        }
+    }
+}

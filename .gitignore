@@ -44,3 +44,7 @@ Thumbs.db
 
 # local-only helper scripts
 scripts/check_gpu.py
+
+# local-only
+mlruns/
+demo_images/
