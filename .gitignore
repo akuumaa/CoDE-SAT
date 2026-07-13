@@ -47,4 +47,5 @@ scripts/check_gpu.py
 
 # local-only
 mlruns/
+mlflow.db
 demo_images/
