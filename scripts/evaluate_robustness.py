@@ -172,7 +172,7 @@ def main():
     parser.add_argument(
         "--checkpoint-dir",
         type=Path,
-        default=ROOT / "results" / "stage1_checkpoints",
+        default=ROOT / "outputs" / "checkpoints",
         help="directory with the stage-1 *_best.pt checkpoints",
     )
 

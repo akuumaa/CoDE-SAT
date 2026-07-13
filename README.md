@@ -218,3 +218,23 @@ uv run python scripts/interpretability.py \
     --checkpoint results/stage1_checkpoints/deit_small_distilled_patch16_224.fb_in1k_sgd_stage1_best.pt \
     --images-dir demo_images
 ```
+
+## Ordnerübersicht
+
+```
+CoDE-SAT/
+├── data/                   EuroSAT-Bilder + Split-CSVs (lokal, nicht in git)
+├── scripts/                fertige Skripte je Experiment
+├── train.py                Training für Stufe 0-2
+├── outputs/                wohin train.py beim Ausführen schreibt: Checkpoints + Metrik-JSONs, nicht in git
+└── results/                committete Experiment-Ergebnisse, sortiert nach Stufe
+    ├── conv/               Stufe 0, ConvNeXt-Tiny
+    ├── deit/               Stufe 0, DeiT-Small
+    ├── stage1/             Stufe 1, alle 3 Modelle x 3 Seeds
+    ├── stage1_checkpoints/ *.pt-Checkpoints, nicht in git
+    ├── stage2/             Stufe 2, Data Efficiency
+    ├── stage3/             Stufe 3, Robustheit + Per-Bild-Vorhersagen
+    └── figures/            Abbildungen (Interpretierbarkeit, Störungen, Confusion-Matrix)
+```
+
+
